@@ -1,0 +1,44 @@
+# Sandbox stand-in for pulumi/docs "Schedule social media posts".
+# Mirrors the trigger pattern proposed in pulumi/docs#19235.
+name: Schedule social media posts
+
+on:
+  workflow_run:
+    workflows: ["Build and deploy"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  schedule-social:
+    # Mirror the proposed gate exactly.
+    if: |
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report trigger context
+        run: |
+          echo "event_name:        $GITHUB_EVENT_NAME"
+          echo "workflow_run.conclusion: ${{ github.event.workflow_run.conclusion }}"
+          echo "workflow_run.head_sha:   ${{ github.event.workflow_run.head_sha }}"
+          echo "workflow_run.run_id:     ${{ github.event.workflow_run.id }}"
+          echo "github.sha (default):    $GITHUB_SHA"
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Verify checked-out SHA matches trigger
+        run: |
+          set -eo pipefail
+          HEAD_SHA=$(git rev-parse HEAD)
+          EXPECTED='${{ github.event.workflow_run.head_sha || github.sha }}'
+          echo "HEAD after checkout:     $HEAD_SHA"
+          echo "Expected (trigger SHA):  $EXPECTED"
+          if [ "$HEAD_SHA" != "$EXPECTED" ]; then
+            echo "::error::checkout SHA mismatch"
+            exit 1
+          fi
+          echo "Match. Would now post for: $HEAD_SHA"

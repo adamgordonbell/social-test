@@ -1,0 +1,35 @@
+# Sandbox stand-in for pulumi/docs "Build and deploy".
+# Same `name:` so a workflow_run trigger in a consumer workflow keyed on
+# this string will match.
+name: Build and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_fail:
+        description: 'Force failure to test the schedule-social conclusion gate'
+        required: false
+        default: 'false'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Simulate build time
+        run: |
+          echo "Pretend-building site at SHA: $GITHUB_SHA"
+          echo "Run ID: $GITHUB_RUN_ID"
+          sleep 20
+
+      - name: Maybe fail (to test conclusion gate)
+        if: inputs.force_fail == 'true'
+        run: |
+          echo "Forcing failure"
+          exit 1
+
+      - name: Done
+        run: echo "Pretend-deploy complete for $GITHUB_SHA"
